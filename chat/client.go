@@ -112,8 +112,7 @@ func startChatSession(ui *ChatUI, username string) {
             text := scanner.Text()
 
             // Play receive message sound
-            tmpFileName, err := alert.PrepareSoundFile("incoming.wav
-            ")
+            tmpFileName, err := alert.PrepareSoundFile("Beeper.wav")
             if err != nil {
                 fmt.Println("Error preparing receive message sound:", err)
             } else {
