@@ -2,10 +2,13 @@ package chat
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"net"
 	"strings"
 	"sync"
+
+	"github.com/cameroncuttingedge/terminal-chat/util"
 )
 
 type client struct {
@@ -38,13 +41,13 @@ func broadcast() {
             // Ensure username is unique
             if _, exists := usernameSet[newClient.username]; exists {
                 // If username is taken, send a message to the new client and remove them
-                fmt.Fprintln(newClient.conn, "Username already taken, please reconnect with a different username.")
+                fmt.Fprintln(newClient.conn, "SYSTEM_MESSAGE:UsernameTaken")
                 newClient.conn.Close()
             } else {
                 usernameSet[newClient.username] = true
                 clients = append(clients, newClient)
                 // Announce the new user has joined
-                broadcastMessage(fmt.Sprintf("System: %s has joined the chat.", newClient.username))
+                broadcastMessage(fmt.Sprintf("Robot: %s has joined the chat.", newClient.username))
             }
             clientMux.Unlock()
         case exClient := <-removing:
@@ -54,7 +57,7 @@ func broadcast() {
                     clients = append(clients[:i], clients[i+1:]...)
                     delete(usernameSet, c.username)
                     // Announce that the user has left the chat
-                    broadcastMessage(fmt.Sprintf("System: %s has left the chat.", c.username))
+                    broadcastMessage(fmt.Sprintf("Robot: %s has left the chat.", c.username))
                     break
                 }
             }
@@ -75,7 +78,6 @@ func handleConnection(conn net.Conn) {
     newClient := client{conn: conn}
 
     reader := bufio.NewReader(conn)
-    // Expect the first message to be the username
     username, err := reader.ReadString('\n')
     if err != nil {
         conn.Close()
@@ -100,13 +102,24 @@ func handleConnection(conn net.Conn) {
 }
 
 func StartServer() {
-    listener, err := net.Listen("tcp", "0.0.0.0:9999")
+    port := flag.Int("port", 9999, "The port number on which the server listens")
+    flag.Parse()
+
+    portStr := fmt.Sprintf(":%d", *port)
+
+    listener, err := net.Listen("tcp", "0.0.0.0"+portStr)
     if err != nil {
         fmt.Println("Failed to start server:", err)
         return
     }
+    
     defer listener.Close()
-    fmt.Println("Server started on all interfaces, port 9999")
+    
+    localIP := util.GetLocalIP()
+    fmt.Printf("Server started on %s%s\n", localIP, portStr)
+    fmt.Printf("Clients can connect using: nc %s %d\n", localIP, *port)
+    fmt.Printf("Use these flags -ip=%s -port=%d\n", localIP, *port)
+
 
     go broadcast()
 

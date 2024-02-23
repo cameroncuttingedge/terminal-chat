@@ -2,11 +2,13 @@ package chat
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"hash/fnv"
 	"net"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/cameroncuttingedge/terminal-chat/alert"
 	"github.com/gdamore/tcell/v2"
@@ -21,6 +23,12 @@ type ChatUI struct {
 }
 
 func StartClient() {
+
+    serverIP := flag.String("ip", "127.0.0.1", "The IP address of the server to connect to.")
+	serverPort := flag.String("port", "9999", "The port of the server to connect to.")
+
+	flag.Parse()
+
     app := tview.NewApplication()
 
     // Show login screen and get credentials
@@ -31,7 +39,7 @@ func StartClient() {
     chatUI := setupUIComponents(app, username, password)
 
     // Connect to server and handle chat session
-    startChatSession(chatUI, username)
+    startChatSession(chatUI, username, *serverIP, *serverPort)
 }
 
 func setupUIComponents(app *tview.Application, username, password string) *ChatUI {
@@ -73,8 +81,8 @@ func setupUIComponents(app *tview.Application, username, password string) *ChatU
 
 
 
-func startChatSession(ui *ChatUI, username string) {
-    conn, err := net.Dial("tcp", "localhost:9999")
+func startChatSession(ui *ChatUI, username string, serverIp string, serverPort string) {
+    conn, err := net.Dial("tcp", serverIp + ":" + serverPort)
     if err != nil {
         fmt.Fprintf(tview.ANSIWriter(ui.ChatView), "[red]Failed to connect to server: %v\n", err)
         return
@@ -92,8 +100,8 @@ func startChatSession(ui *ChatUI, username string) {
                 fmt.Fprintf(conn, "%s: %s\n", username, message)
                 ui.InputField.SetText("")
                 
-                // Play send message sound
-                tmpFileName, err := alert.PrepareSoundFile("Beeper.wav")
+                // Play send message sound ONLY here
+                tmpFileName, err := alert.PrepareSoundFile("out.wav")
                 if err != nil {
                     fmt.Println("Error preparing send message sound:", err)
                 } else {
@@ -111,14 +119,13 @@ func startChatSession(ui *ChatUI, username string) {
         for scanner.Scan() {
             text := scanner.Text()
 
-            // Play receive message sound
-            tmpFileName, err := alert.PrepareSoundFile("Beeper.wav")
-            if err != nil {
-                fmt.Println("Error preparing receive message sound:", err)
-            } else {
-                if err := alert.ExecuteSoundPlayback(tmpFileName); err != nil {
-                    fmt.Println("Error playing receive message sound:", err)
-                }
+            // Check if the username is already taken
+            if strings.HasPrefix(text, "SYSTEM_MESSAGE:UsernameTaken") {
+                fmt.Fprintln(tview.ANSIWriter(ui.ChatView), "[red]Username already taken. Please restart the client and choose a different username.[white]")
+                time.Sleep(2 * time.Second)
+                conn.Close()
+                ui.App.Stop()
+                return
             }
 
             // Processing received message
@@ -127,10 +134,21 @@ func startChatSession(ui *ChatUI, username string) {
                     fmt.Fprintln(tview.ANSIWriter(ui.ChatView), "[yellow]"+text+"[white]")
                 } else {
                     parts := strings.SplitN(text, ": ", 2)
-                    if len(parts) == 2 {
-                        colorTag := getColorTag(parts[0])
-                        fmt.Fprintf(tview.ANSIWriter(ui.ChatView), "[%s]%s:[white] %s\n", colorTag, parts[0], parts[1])
+                    if len(parts) == 2 && parts[0] != username { // Ensure message is not from the user
+                        // Play receive message sound ONLY for messages from others
+                        tmpFileName, err := alert.PrepareSoundFile("incoming.wav")
+                        if err != nil {
+                            fmt.Println("Error preparing receive message sound:", err)
+                        } else {
+                            if err := alert.ExecuteSoundPlayback(tmpFileName); err != nil {
+                                fmt.Println("Error playing receive message sound:", err)
+                            }
+                        }
                     }
+
+                    // Display message in chat view
+                    colorTag := getColorTag(parts[0])
+                    fmt.Fprintf(tview.ANSIWriter(ui.ChatView), "[%s]%s:[white] %s\n", colorTag, parts[0], parts[1])
                 }
             })
         }
@@ -142,6 +160,8 @@ func startChatSession(ui *ChatUI, username string) {
         os.Exit(1)
     }
 }
+
+
 
 
 
@@ -167,6 +187,8 @@ func showFormScreen(app *tview.Application, title, label string) string {
 
     return input
 }
+
+
 
 
 func getColorTag(username string) string {
