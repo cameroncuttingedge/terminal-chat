@@ -3,6 +3,7 @@ package alert
 import (
 	"embed"
 	"errors"
+	"fmt"
 	"io"
 	"io/fs"
 	"log"
@@ -21,38 +22,22 @@ var wavFS embed.FS
 //go:embed icon/clock.png
 var clockPNG embed.FS
 
-func EndOfTimer(soundFilePath, title, message string) {
-	// Play the end of timer sound in a non-blocking way
-	go func() {
-		tmpFileName, err := PrepareSoundFile(soundFilePath)
-		if err != nil {
-			log.Printf("Error preparing sound file: %v", err)
-			return
-		}
 
-		// This doesn't always work as someimes the applciation quits beforehand
-		// See the cleanup func in main.go for the backup plan
-		defer func() {
-			if removeErr := os.Remove(tmpFileName); removeErr != nil {
-				log.Printf("Error removing temporary file '%s': %v", tmpFileName, removeErr)
-			}
-		}()
+func PlaySoundAsync(fileName string) {
+    go func() {
+        tmpFileName, err := PrepareSoundFile(fileName)
+        if err != nil {
+            fmt.Printf("Error preparing send message sound: %v\n", err)
+            return
+        }
+        defer os.Remove(tmpFileName) // Ensure the file is cleaned up after playing
 
-		// Play the sound
-		err = ExecuteSoundPlayback(tmpFileName)
-		if err != nil {
-			log.Printf("Error playing sound: %v", err)
-		}
-	}()
-
-	// Execute notification display in a separate goroutine
-	go func() {
-		err := ShowNotification(title, message)
-		if err != nil {
-			log.Printf("Error showing notification: %v", err)
-		}
-	}()
+        if err := ExecuteSoundPlayback(tmpFileName); err != nil {
+            fmt.Printf("Error playing send message sound: %v\n", err)
+        }
+    }()
 }
+
 
 func ExecuteSoundPlayback(tmpFileName string) error {
 	var cmd *exec.Cmd
