@@ -25,6 +25,7 @@ var (
     messages  = make(chan string)
     clientMux sync.Mutex
     usernameSet = make(map[string]bool) // Track usernames to ensure uniqueness
+    usedColors = make(map[string]bool)
     colors = []string{
         "[green]",     
         "[yellow]",    
@@ -69,6 +70,8 @@ func prepareClientAddition(newClient client) {
         clients = append(clients, newClient)
         clientMux.Unlock() // Unlock before broadcasting to avoid holding the lock during I/O
         broadcastMessage(fmt.Sprintf("Robot: %s has joined the chat.", newClient.username), "SYSTEM")
+        colorMessage := fmt.Sprintf("SYSTEM_MESSAGE:Color:%s", newClient.color)
+        fmt.Fprintln(newClient.conn, colorMessage)
     }
 }
 
@@ -78,6 +81,7 @@ func prepareClientRemoval(exClient client) {
         if c.conn == exClient.conn {
             clients = append(clients[:i], clients[i+1:]...)
             delete(usernameSet, exClient.username)
+            usedColors[exClient.color] = false
             break
         }
     }
@@ -129,13 +133,26 @@ func formatMessage(message, messageType string) string {
 }
 
 
+func assignColorToNewClient(newClient *client) {
+    // Try to find an unused color
+    for _, color := range colors {
+        if !usedColors[color] {
+            newClient.color = color
+            usedColors[color] = true
+            return
+        }
+    }
+    newClient.color = colors[len(clients)%len(colors)]
+}
+
+
 
 func handleConnection(conn net.Conn) {
     // Temporary client object; username will be set upon receiving the first message
     newClient := client{conn: conn}
 
     // Assign a color to the new client based on the current number of clients
-    newClient.color = colors[len(clients)%len(colors)]
+    assignColorToNewClient(&newClient)
 
     reader := bufio.NewReader(conn)
     username, err := reader.ReadString('\n')

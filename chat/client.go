@@ -65,7 +65,7 @@ func setupUIComponents(app *tview.Application, username, password string) *ChatU
 
     // Initialize the InputField.
     chatUI.InputField = tview.NewInputField()
-    chatUI.InputField.SetLabel(fmt.Sprintf("%s: ", username))
+    chatUI.InputField.SetLabel(fmt.Sprintf("[red]%s[-]: ", username))
     chatUI.InputField.SetFieldWidth(0)
     chatUI.InputField.SetFieldBackgroundColor(tcell.ColorDefault)
     chatUI.InputField.SetBorder(true)
@@ -163,10 +163,19 @@ func handleIncomingMessages(conn net.Conn, ui *ChatUI, username string) {
             ui.App.Stop()
             return
         }
+        if strings.HasPrefix(text, "SYSTEM_MESSAGE:Color:") {
+            parts := strings.Split(text, ":")
+            if len(parts) == 3 { 
+                userColor := parts[2] 
+                ui.InputField.SetLabel(fmt.Sprintf("%s%s[-]: ", userColor,  username))
+                continue 
+            }
+        }
         ui.App.QueueUpdateDraw(func() {
             parts := strings.SplitN(text, ": ", 2)
             if len(parts) == 2 && !isUsernameContained(parts[0], username) {
                 alert.PlaySoundAsync("in.wav")
+                //alert.ShowNotification(parts[0], text)
             }
             fmt.Fprintln(tview.ANSIWriter(ui.ChatView), text)
             ui.ChatView.ScrollToEnd()
