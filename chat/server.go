@@ -28,19 +28,19 @@ var (
 	usernameSet = make(map[string]bool) // Track usernames to ensure uniqueness
 	usedColors  = make(map[string]bool)
 	colors      = []string{
-		"[green]",
-		"[yellow]",
-		"[blue]",
-		"[fuchsia]",
-		"[cyan]",
-		"[white]",
-		"[lightred]",
-		"[lightgreen]",
-		"[lightyellow]",
-		"[lightblue]",
-		"[lightmagenta]",
-		"[lightcyan]",
-		"[lightgray]",
+		"[#D2691E]",
+		"[#8B4513]",
+		"[#F4A460]",
+		"[#A0522D]",
+		"[#CD853F]",
+		"[#DEB887]",
+		"[#FFF8DC]",
+		"[#A52A2A]",
+		"[#6B8E23]",
+		"[#DAA520]",
+		"[#BC8F8F]",
+		"[#8B4513]",
+		"[#2F4F4F]",
 	}
 )
 
@@ -241,7 +241,7 @@ func StartServer() {
 			continue
 		}
 		go handleConnection(conn)
-	}		
+	}
 }
 
 func startHeartbeat() {
