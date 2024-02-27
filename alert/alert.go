@@ -19,19 +19,21 @@ import (
 //go:embed WAV/*
 var wavFS embed.FS
 
-func PlaySoundAsync(fileName string) {
-	go func() {
-		tmpFileName, err := PrepareSoundFile(fileName)
-		if err != nil {
-			fmt.Printf("Error preparing send message sound: %v\n", err)
-			return
-		}
-		defer os.Remove(tmpFileName) // Ensure the file is cleaned up after playing
+func PlaySoundAsync(fileName string, playSound bool) {
+	if playSound {
+		go func() {
+			tmpFileName, err := PrepareSoundFile(fileName)
+			if err != nil {
+				fmt.Printf("Error preparing send message sound: %v\n", err)
+				return
+			}
+			defer os.Remove(tmpFileName) // Ensure the file is cleaned up after playing
 
-		if err := ExecuteSoundPlayback(tmpFileName); err != nil {
-			fmt.Printf("Error playing send message sound: %v\n", err)
-		}
-	}()
+			if err := ExecuteSoundPlayback(tmpFileName); err != nil {
+				fmt.Printf("Error playing send message sound: %v\n", err)
+			}
+		}()
+	}
 }
 
 func ExecuteSoundPlayback(tmpFileName string) error {

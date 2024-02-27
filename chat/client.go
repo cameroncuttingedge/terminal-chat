@@ -24,11 +24,13 @@ type ChatUI struct {
 }
 
 var heartbeatChan = make(chan time.Time)
+var playSound bool
 
 func StartClient() {
 	log.Println("Starting client application...")
 	serverIP := flag.String("ip", "127.0.0.1", "The IP address of the server to connect to.")
 	serverPort := flag.String("port", "9999", "The port of the server to connect to.")
+	flag.BoolVar(&playSound, "sound", true, "Enable or disable sound (true/false)")
 
 	flag.Parse()
 
@@ -66,8 +68,11 @@ func setupUIComponents(app *tview.Application, username string) *ChatUI {
 
 	// Initialize the InputField.
 	chatUI.InputField = tview.NewInputField()
+	// Place holder until the client get the user color from the server
 	chatUI.InputField.SetLabel(fmt.Sprintf("[red]%s[-]: ", username))
+	chatUI.ChatView.SetDynamicColors(true)
 	chatUI.InputField.SetFieldWidth(0)
+	chatUI.ChatView.SetRegions(true)
 	chatUI.InputField.SetFieldBackgroundColor(tcell.ColorDefault)
 	chatUI.InputField.SetBorder(true)
 	chatUI.InputField.SetTitle(" Input ")
@@ -139,7 +144,8 @@ func setupMessageSending(ui *ChatUI, conn net.Conn, username string) {
 					log.Println("Message sent successfully")
 				}
 				ui.InputField.SetText("")
-				alert.PlaySoundAsync("out.wav")
+				alert.PlaySoundAsync("out.wav", playSound)
+
 			}
 		}
 	})
@@ -175,7 +181,7 @@ func handleIncomingMessages(conn net.Conn, ui *ChatUI, username string) {
 		ui.App.QueueUpdateDraw(func() {
 			parts := strings.SplitN(text, ": ", 2)
 			if len(parts) == 2 && !isUsernameContained(parts[0], username) {
-				alert.PlaySoundAsync("in.wav")
+				alert.PlaySoundAsync("in.wav", playSound)
 				//alert.ShowNotification(parts[0], text)
 			}
 			fmt.Fprintln(tview.ANSIWriter(ui.ChatView), text)
