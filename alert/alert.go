@@ -3,6 +3,7 @@ package alert
 import (
 	"embed"
 	"errors"
+	"fmt"
 	"io"
 	"io/fs"
 	"log"
@@ -18,40 +19,21 @@ import (
 //go:embed WAV/*
 var wavFS embed.FS
 
-//go:embed icon/clock.png
-var clockPNG embed.FS
+func PlaySoundAsync(fileName string, playSound bool) {
+	if playSound {
+		go func() {
+			tmpFileName, err := PrepareSoundFile(fileName)
+			if err != nil {
+				fmt.Printf("Error preparing send message sound: %v\n", err)
+				return
+			}
+			defer os.Remove(tmpFileName) // Ensure the file is cleaned up after playing
 
-func EndOfTimer(soundFilePath, title, message string) {
-	// Play the end of timer sound in a non-blocking way
-	go func() {
-		tmpFileName, err := PrepareSoundFile(soundFilePath)
-		if err != nil {
-			log.Printf("Error preparing sound file: %v", err)
-			return
-		}
-
-		// This doesn't always work as someimes the applciation quits beforehand
-		// See the cleanup func in main.go for the backup plan
-		defer func() {
-			if removeErr := os.Remove(tmpFileName); removeErr != nil {
-				log.Printf("Error removing temporary file '%s': %v", tmpFileName, removeErr)
+			if err := ExecuteSoundPlayback(tmpFileName); err != nil {
+				fmt.Printf("Error playing send message sound: %v\n", err)
 			}
 		}()
-
-		// Play the sound
-		err = ExecuteSoundPlayback(tmpFileName)
-		if err != nil {
-			log.Printf("Error playing sound: %v", err)
-		}
-	}()
-
-	// Execute notification display in a separate goroutine
-	go func() {
-		err := ShowNotification(title, message)
-		if err != nil {
-			log.Printf("Error showing notification: %v", err)
-		}
-	}()
+	}
 }
 
 func ExecuteSoundPlayback(tmpFileName string) error {
@@ -93,43 +75,36 @@ func ExecuteSoundPlayback(tmpFileName string) error {
 }
 
 func PrepareSoundFile(filePath string) (string, error) {
-    // Generate a new temporary file name
-    util.GenerateTempSoundFileName()
-    tmpFileName := util.TempFileName // Use the generated temporary file name
+	// Generate a new temporary file name
+	util.GenerateTempSoundFileName()
+	tmpFileName := util.TempFileName // Use the generated temporary file name
 
-    soundFilePath := "WAV/" + filePath // Ensure this path is correct for your application
-    soundFile, err := wavFS.Open(soundFilePath)
-    if err != nil {
-        log.Printf("Error opening embedded sound file '%s': %v", soundFilePath, err)
-        return "", err
-    }
-    defer soundFile.Close()
+	soundFilePath := "WAV/" + filePath // Ensure this path is correct for your application
+	soundFile, err := wavFS.Open(soundFilePath)
+	if err != nil {
+		log.Printf("Error opening embedded sound file '%s': %v", soundFilePath, err)
+		return "", err
+	}
+	defer soundFile.Close()
 
-    // Open the temporary file for writing
-    tmpFile, err := os.Create(tmpFileName)
-    if err != nil {
-        log.Printf("Error creating temporary file '%s': %v", tmpFileName, err)
-        return "", err
-    }
-    defer tmpFile.Close()
+	// Open the temporary file for writing
+	tmpFile, err := os.Create(tmpFileName)
+	if err != nil {
+		log.Printf("Error creating temporary file '%s': %v", tmpFileName, err)
+		return "", err
+	}
+	defer tmpFile.Close()
 
-    // Copy the sound data to the temporary file
-    if _, err := io.Copy(tmpFile, soundFile); err != nil {
-        log.Printf("Error copying to temporary file '%s': %v", tmpFileName, err)
-        return "", err
-    }
+	// Copy the sound data to the temporary file
+	if _, err := io.Copy(tmpFile, soundFile); err != nil {
+		log.Printf("Error copying to temporary file '%s': %v", tmpFileName, err)
+		return "", err
+	}
 
-    return tmpFileName, nil
+	return tmpFileName, nil
 }
 
 func ShowNotification(title, message string) error {
-	clockFile, err := clockPNG.Open("icon/clock.png")
-	if err != nil {
-		log.Printf("Error opening embedded image 'WAV/clock.png': %v", err)
-		return err
-	}
-	defer clockFile.Close()
-
 	// Create a temporary file for the image
 	tmpFile, err := os.CreateTemp("", "clock-*.png")
 	if err != nil {
@@ -138,13 +113,6 @@ func ShowNotification(title, message string) error {
 	}
 	defer tmpFile.Close()
 	defer os.Remove(tmpFile.Name()) // Clean up the temp file after use
-
-	// Copy the clock image content to the temporary file
-	_, err = io.Copy(tmpFile, clockFile)
-	if err != nil {
-		log.Printf("Error copying image to temporary file '%s': %v", tmpFile.Name(), err)
-		return err
-	}
 
 	// Use the path of the temp file for the icon in beeep.Notify
 	iconPath := tmpFile.Name()
