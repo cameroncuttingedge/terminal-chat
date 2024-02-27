@@ -36,16 +36,18 @@ func StartClient() {
 
 	// Show login screen and get credentials
 	username := showFormScreen(app, "Enter your username", "Username")
-	password := showFormScreen(app, "Enter your password", "Password")
+
+	// Ignore for now TODO?
+	//password := showFormScreen(app, "Enter your password", "Password")
 
 	// Initialize the UI components
-	chatUI := setupUIComponents(app, username, password)
+	chatUI := setupUIComponents(app, username)
 
 	// Connect to server and handle chat session
 	startChatSession(chatUI, username, *serverIP, *serverPort)
 }
 
-func setupUIComponents(app *tview.Application, username, password string) *ChatUI {
+func setupUIComponents(app *tview.Application, username string) *ChatUI {
 	chatUI := &ChatUI{
 		App: app,
 	}
@@ -69,6 +71,7 @@ func setupUIComponents(app *tview.Application, username, password string) *ChatU
 	chatUI.InputField.SetFieldBackgroundColor(tcell.ColorDefault)
 	chatUI.InputField.SetBorder(true)
 	chatUI.InputField.SetTitle(" Input ")
+	chatUI.InputField.SetLabelColor(tcell.ColorDefault)
 
 	// Setup the UI layout with both components.
 	flex := tview.NewFlex().

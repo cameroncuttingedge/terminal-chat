@@ -68,8 +68,11 @@ func prepareClientAddition(newClient client) {
 	} else {
 		usernameSet[newClient.username] = true
 		clients = append(clients, newClient)
-		clientMux.Unlock() // Unlock before broadcasting to avoid holding the lock during I/O
-		broadcastMessage(fmt.Sprintf("Robot: %s has joined the chat.", newClient.username), "SYSTEM")
+		clientMux.Unlock()
+		broadcastMessage(
+			fmt.Sprintf("Robot: %s%s[-] [red]has joined the chat.[-]", newClient.color, newClient.username),
+			"SYSTEM",
+		)
 		colorMessage := fmt.Sprintf("SYSTEM_MESSAGE:Color:%s", newClient.color)
 		fmt.Fprintln(newClient.conn, colorMessage)
 	}
@@ -180,10 +183,12 @@ func handleConnection(conn net.Conn) {
 		messageContent := getMessageContentAfterColon(trimmedMessage)
 
 		if strings.HasPrefix(messageContent, "!man") {
-			handleSpecialCommand(newClient, "man")
+			specialMessage := util.GetSpecialMessage("man")
+			sendMessageToClient(newClient, specialMessage)
 			continue
 		} else if strings.HasPrefix(messageContent, "!party") {
-			handleSpecialCommand(newClient, "party")
+			specialMessage := util.GetSpecialMessage("party")
+			sendMessageToClient(newClient, specialMessage)
 			continue
 		}
 		log.Printf("[Server] Sending message from '%s' to channel: %s", newClient.username, trimmedMessage)
@@ -201,11 +206,7 @@ func getMessageContentAfterColon(message string) string {
 	return message
 }
 
-func handleSpecialCommand(c client, action string) {
-
-	specialMessage := util.GetSpecialMessage(action)
-
-	specialMessage = formatMessage(specialMessage, "SYSTEM")
+func sendMessageToClient(c client, specialMessage string) {
 
 	fmt.Fprintln(c.conn, specialMessage)
 }
@@ -214,7 +215,6 @@ func StartServer() {
 	port := flag.Int("port", 9999, "The port number on which the server listens")
 	flag.Parse()
 
-	//go monitorChannelState()
 	portStr := fmt.Sprintf(":%d", *port)
 
 	listener, err := net.Listen("tcp", "0.0.0.0"+portStr)
