@@ -23,6 +23,9 @@ type ChatUI struct {
     InputField *tview.InputField
 }
 
+var  heartbeatChan = make(chan time.Time)
+
+
 func StartClient() {
     log.Println("Starting client application...")
     serverIP := flag.String("ip", "127.0.0.1", "The IP address of the server to connect to.")
@@ -40,9 +43,7 @@ func StartClient() {
     chatUI := setupUIComponents(app, username, password)
 
     // Connect to server and handle chat session
-    startChatSession(chatUI, username, *serverIP, *serverPort)
-
-    
+    startChatSession(chatUI, username, *serverIP, *serverPort)    
 }
 
 
@@ -163,6 +164,10 @@ func handleIncomingMessages(conn net.Conn, ui *ChatUI, username string) {
             ui.App.Stop()
             return
         }
+        if strings.Contains(text, "SYSTEM_MESSAGE:PING") {
+            heartbeatChan <- time.Now() 
+            continue
+        }
         if strings.HasPrefix(text, "SYSTEM_MESSAGE:Color:") {
             parts := strings.Split(text, ":")
             if len(parts) == 3 { 
@@ -203,6 +208,9 @@ func startChatSession(ui *ChatUI, username string, serverIp string, serverPort s
     // Setting up message sending functionality
     setupMessageSending(ui, conn, username)
 
+    // check on server health 
+    go monitorServerHeartbeat(heartbeatChan, ui)
+
 
     // Handling incoming messages
     go handleIncomingMessages(conn, ui, username)
@@ -214,6 +222,27 @@ func startChatSession(ui *ChatUI, username string, serverIp string, serverPort s
         os.Exit(1)
     }
 }
+
+
+func monitorServerHeartbeat(heartbeatChan <-chan time.Time, ui *ChatUI) {
+    timeoutDuration := 30 * time.Second
+    heartbeatTimer := time.NewTimer(timeoutDuration)
+
+    for {
+        select {
+        case <-heartbeatTimer.C: // Timer expired
+            fmt.Println("Server connection lost. Shutting down...")
+            time.Sleep(3 * time.Second)
+            ui.App.Stop()
+            fmt.Println("Server connection lost. Shutting down...")
+            return
+        case heartbeat := <-heartbeatChan: // Received heartbeat
+            heartbeatTimer.Reset(timeoutDuration)
+            _ = heartbeat
+        }
+    }
+}
+
 
 
 func showFormScreen(app *tview.Application, title, label string) string {

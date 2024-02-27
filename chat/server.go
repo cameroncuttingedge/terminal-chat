@@ -8,6 +8,7 @@ import (
 	"net"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/cameroncuttingedge/terminal-chat/util"
 )
@@ -241,6 +242,7 @@ func handleSpecialCommand(c client, action string) {
 func StartServer() {
     port := flag.Int("port", 9999, "The port number on which the server listens")
     flag.Parse()
+    
     //go monitorChannelState()
     portStr := fmt.Sprintf(":%d", *port)
 
@@ -259,6 +261,8 @@ func StartServer() {
 
     go broadcast()
 
+    go startHeartbeat()
+
     for {
         conn, err := listener.Accept()
         if err != nil {
@@ -269,3 +273,14 @@ func StartServer() {
     }
 }
 
+
+
+func startHeartbeat() {
+    ticker := time.NewTicker(5 * time.Second)
+    defer ticker.Stop()
+
+    for {
+        <-ticker.C
+        broadcastMessage("SYSTEM_MESSAGE:PING", "SYSTEM")
+    }
+}
