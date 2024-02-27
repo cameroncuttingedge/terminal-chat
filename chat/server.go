@@ -87,39 +87,44 @@ func prepareClientRemoval(exClient client) {
 
 
 func broadcastMessage(message string, messageType string) {
-    log.Printf("Message: %s", message)
     clientMux.Lock()
     defer clientMux.Unlock()
 
-    var formattedMessage string
+    formattedMessage := formatMessage(message, messageType)
+
+    for _, c := range clients {
+        _, err := fmt.Fprintln(c.conn, formattedMessage)
+        if err != nil {
+            log.Printf("Error broadcasting to client %s: %v", c.username, err)
+        } else {
+            log.Printf("[Server] Broadcasting message: %s to client: %s", formattedMessage, c.username)
+        }
+    }
+}
+
+
+
+func formatMessage(message, messageType string) string {
     if messageType == "SYSTEM" {
-        formattedMessage = fmt.Sprintf("[red]%s[-]", message)
-    } else {
+        return fmt.Sprintf("[red]%s[-]", message)
+    } else { 
         parts := strings.SplitN(message, ": ", 2)
         if len(parts) == 2 {
             var userColor string
+            // Find the user's color
             for _, c := range clients {
                 if c.username == parts[0] {
                     userColor = c.color
                     break
                 }
             }
-            //  default to white for safety
-            if userColor == "" {
-                userColor = "white"
+            if userColor == "" { // Default color if not found
+                userColor = "[white]"
             }
-
-            formattedMessage = fmt.Sprintf("%s%s[-]: %s", userColor, parts[0], parts[1])
-            log.Printf("Message formatted: %s", formattedMessage)
-        } else {
-            // Fallback in case the message format is unexpected
-            formattedMessage = message
-            log.Printf("Error in format messages: %s", message)
+            return fmt.Sprintf("%s%s[-]: %s", userColor, parts[0], parts[1])
         }
-    }
-    for _, c := range clients {
-        fmt.Fprintln(c.conn, formattedMessage)
-        log.Printf("[Server] Broadcasting message: %s to client: %s", formattedMessage, c)
+        // Fallback for unexpected message format
+        return message
     }
 }
 
@@ -161,6 +166,16 @@ func handleConnection(conn net.Conn) {
             break // Connection closed or error occurred
         }
         trimmedMessage := strings.TrimSpace(message)
+
+        messageContent := getMessageContentAfterColon(trimmedMessage)
+
+        if strings.HasPrefix(messageContent, "!man") {
+            handleSpecialCommand(newClient, "man")
+            continue
+        } else if strings.HasPrefix(messageContent, "!party") {
+            handleSpecialCommand(newClient, "party")
+            continue
+        }
         log.Printf("[Server] Sending message from '%s' to channel: %s", newClient.username, trimmedMessage)
         messages <- trimmedMessage
         log.Printf("[Server] Message sent to channel from '%s'", newClient.username)
@@ -168,6 +183,43 @@ func handleConnection(conn net.Conn) {
 
     log.Printf("Client disconnected: %s", newClient.username)
 }
+
+func getMessageContentAfterColon(message string) string {
+    if idx := strings.Index(message, ":"); idx != -1 {
+        return strings.TrimSpace(message[idx+1:])
+    }
+    return message 
+}
+
+
+func handleSpecialCommand(c client, action string) {
+    var specialMessage string
+
+    switch action {
+    case "man":
+        specialMessage = "Robot: To scroll through the chat, use the arrow keys or your mouse wheel. To focus on the input section, press Tab."
+    case "party":
+        specialMessage = `
+░░░░░░░░▄▄▄▀▀▀▄▄███▄░░░░░░░░░░░░░░
+░░░░░▄▀▀░░░░░░░▐░▀██▌░░░░░░░░░░░░░
+░░░▄▀░░░░▄▄███░▌▀▀░▀█░░░░░░░░░░░░░
+░░▄█░░▄▀▀▒▒▒▒▒▄▐░░░░█▌░░░░░░░░░░░░
+░▐█▀▄▀▄▄▄▄▀▀▀▀▌░░░░░▐█▄░░░░░░░░░░░
+░▌▄▄▀▀░░░░░░░░▌░░░░▄███████▄░░░░░░
+░░░░░░░░░░░░░▐░░░░▐███████████▄░░░
+░░░░░le░░░░░░░▐░░░░▐█████████████▄
+░░░░toucan░░░░░░▀▄░░░▐█████████████▄
+░░░░░░has░░░░░░░░▀▄▄███████████████
+░░░░░arrived░░░░░░░░░░░░█▀██████░░`
+    default:
+        specialMessage = "Unknown command."
+    }
+
+    specialMessage = formatMessage(specialMessage, "SYSTEM")
+
+    fmt.Fprintln(c.conn, specialMessage)
+}
+
 
 func StartServer() {
     port := flag.Int("port", 9999, "The port number on which the server listens")
