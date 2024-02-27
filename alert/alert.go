@@ -22,22 +22,20 @@ var wavFS embed.FS
 //go:embed icon/clock.png
 var clockPNG embed.FS
 
-
 func PlaySoundAsync(fileName string) {
-    go func() {
-        tmpFileName, err := PrepareSoundFile(fileName)
-        if err != nil {
-            fmt.Printf("Error preparing send message sound: %v\n", err)
-            return
-        }
-        defer os.Remove(tmpFileName) // Ensure the file is cleaned up after playing
+	go func() {
+		tmpFileName, err := PrepareSoundFile(fileName)
+		if err != nil {
+			fmt.Printf("Error preparing send message sound: %v\n", err)
+			return
+		}
+		defer os.Remove(tmpFileName) // Ensure the file is cleaned up after playing
 
-        if err := ExecuteSoundPlayback(tmpFileName); err != nil {
-            fmt.Printf("Error playing send message sound: %v\n", err)
-        }
-    }()
+		if err := ExecuteSoundPlayback(tmpFileName); err != nil {
+			fmt.Printf("Error playing send message sound: %v\n", err)
+		}
+	}()
 }
-
 
 func ExecuteSoundPlayback(tmpFileName string) error {
 	var cmd *exec.Cmd
@@ -78,33 +76,33 @@ func ExecuteSoundPlayback(tmpFileName string) error {
 }
 
 func PrepareSoundFile(filePath string) (string, error) {
-    // Generate a new temporary file name
-    util.GenerateTempSoundFileName()
-    tmpFileName := util.TempFileName // Use the generated temporary file name
+	// Generate a new temporary file name
+	util.GenerateTempSoundFileName()
+	tmpFileName := util.TempFileName // Use the generated temporary file name
 
-    soundFilePath := "WAV/" + filePath // Ensure this path is correct for your application
-    soundFile, err := wavFS.Open(soundFilePath)
-    if err != nil {
-        log.Printf("Error opening embedded sound file '%s': %v", soundFilePath, err)
-        return "", err
-    }
-    defer soundFile.Close()
+	soundFilePath := "WAV/" + filePath // Ensure this path is correct for your application
+	soundFile, err := wavFS.Open(soundFilePath)
+	if err != nil {
+		log.Printf("Error opening embedded sound file '%s': %v", soundFilePath, err)
+		return "", err
+	}
+	defer soundFile.Close()
 
-    // Open the temporary file for writing
-    tmpFile, err := os.Create(tmpFileName)
-    if err != nil {
-        log.Printf("Error creating temporary file '%s': %v", tmpFileName, err)
-        return "", err
-    }
-    defer tmpFile.Close()
+	// Open the temporary file for writing
+	tmpFile, err := os.Create(tmpFileName)
+	if err != nil {
+		log.Printf("Error creating temporary file '%s': %v", tmpFileName, err)
+		return "", err
+	}
+	defer tmpFile.Close()
 
-    // Copy the sound data to the temporary file
-    if _, err := io.Copy(tmpFile, soundFile); err != nil {
-        log.Printf("Error copying to temporary file '%s': %v", tmpFileName, err)
-        return "", err
-    }
+	// Copy the sound data to the temporary file
+	if _, err := io.Copy(tmpFile, soundFile); err != nil {
+		log.Printf("Error copying to temporary file '%s': %v", tmpFileName, err)
+		return "", err
+	}
 
-    return tmpFileName, nil
+	return tmpFileName, nil
 }
 
 func ShowNotification(title, message string) error {
