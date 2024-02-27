@@ -45,42 +45,64 @@ func StartClient() {
     
 }
 
+
 func setupUIComponents(app *tview.Application, username, password string) *ChatUI {
     chatUI := &ChatUI{
         App: app,
     }
 
-    chatUI.ChatView = tview.NewTextView()
-
-    // Initialize the chat view
+    // Initialize the ChatView.
     chatUI.ChatView = tview.NewTextView()
     chatUI.ChatView.SetDynamicColors(true)
     chatUI.ChatView.SetRegions(true)
     chatUI.ChatView.SetScrollable(true)
     chatUI.ChatView.SetBackgroundColor(tcell.ColorDefault)
-    chatUI.ChatView.SetBorder(false)
+    chatUI.ChatView.SetBorder(true)
     chatUI.ChatView.SetTitle(" Chat ")
+    chatUI.ChatView.SetChangedFunc(func() {
+        app.Draw()
+    })
 
-    // Initialize the input field
+    // Initialize the InputField.
     chatUI.InputField = tview.NewInputField()
     chatUI.InputField.SetLabel(fmt.Sprintf("%s: ", username))
     chatUI.InputField.SetFieldWidth(0)
     chatUI.InputField.SetFieldBackgroundColor(tcell.ColorDefault)
-    chatUI.InputField.SetBorder(false)
+    chatUI.InputField.SetBorder(true)
     chatUI.InputField.SetTitle(" Input ")
 
-    // No need for SetInputCapture if we are using default scrolling behavior
-
-    // Setup the UI layout
+    // Setup the UI layout with both components.
     flex := tview.NewFlex().
         SetDirection(tview.FlexRow).
-        AddItem(chatUI.ChatView, 0, 1, false). 
-        AddItem(chatUI.InputField, 1, 0, true)
+        AddItem(chatUI.ChatView, 0, 1, false).
+        AddItem(chatUI.InputField, 3, 1, true)
 
     app.SetRoot(flex, true).SetFocus(chatUI.InputField)
 
+    app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+        if event.Key() == tcell.KeyTab {
+            // Switch focus between InputField and ChatView.
+            if app.GetFocus() == chatUI.InputField {
+                app.SetFocus(chatUI.ChatView)
+            } else {
+                app.SetFocus(chatUI.InputField)
+            }
+            return nil
+        } else if event.Key() == tcell.KeyBacktab { // Reverse cycling with Shift+Tab.
+            if app.GetFocus() == chatUI.InputField {
+                app.SetFocus(chatUI.ChatView)
+            } else {
+                app.SetFocus(chatUI.InputField)
+            }
+            return nil
+        }
+        return event
+    })
+
     return chatUI
 }
+
+
 
 func connectToServer(serverIp, serverPort string) (net.Conn, error) {
     log.Printf("Attempting to connect to server at %s:%s", serverIp, serverPort)
@@ -147,6 +169,7 @@ func handleIncomingMessages(conn net.Conn, ui *ChatUI, username string) {
                 alert.PlaySoundAsync("in.wav")
             }
             fmt.Fprintln(tview.ANSIWriter(ui.ChatView), text)
+            ui.ChatView.ScrollToEnd()
         })
     }
 }
@@ -208,10 +231,8 @@ func showFormScreen(app *tview.Application, title, label string) string {
 
 
 func isUsernameContained(encodedStr, username string) bool {
-	// Regex to find and remove color encoding like [green]...[-]
+	// Regex to find and remove color encoding
 	re := regexp.MustCompile(`\[[^\[\]]*\]`)
 	cleanStr := re.ReplaceAllString(encodedStr, "")
-
-	// Now check if the username is contained within the cleaned string
 	return strings.Contains(cleanStr, username)
 }
