@@ -6,13 +6,13 @@ Terminal Chat Application
 
 =========================
 
-This Terminal Chat Application is a real-time communication tool built in Go, designed for developers and terminal enthusiasts. It offers a seamless chat experience directly from your terminal, featuring a user-friendly interface, customizable user colors, and support for special commands. The application leverages Go's concurrency features, the `tview` and `tcell` libraries for the UI, and supports dynamic user interactions.
+This Terminal Chat Application is a real-time communication tool built in Go, designed for  terminal enthusiasts to chat with others on their local network. It offers a chat experience directly from your terminal, featuring a user-friendly interface, customizable user colors, and support for special commands. The application leverages Go's concurrency features, the `tview` and `tcell` libraries for the UI, and supports dynamic user interactions.
 
 Features
 --------
 
--   **Real-Time Communication**: Engage in live chat sessions with minimal latency.
--   **Customizable User Interface**: Powered by `tview` and `tcell`, the UI is both attractive and functional, with support for custom colors.
+-   **Real-Time Communication**: Engage in live chat  with minimal latency.
+-   **Customizable User Interface**: Powered by `tview` and `tcell`, with support for custom colors.
 -   **Special Commands**: Enhance your chat with special commands, offering additional functionalities like help instructions and fun animations.
 -   **Dynamic User Colors**: Users are assigned unique colors for easier identification in the chat.
 -   **Server Heartbeat Monitoring**: Ensures connection stability and alerts users to potential disconnects.
@@ -31,7 +31,7 @@ Getting Started
 
 bash
 
-`git clone https://github.com/yourusername/terminal-chat.git
+`git clone https://github.com/cameroncuttingedge/terminal-chat.git
 cd terminal-chat`
 
 1.  **Build the Application**
