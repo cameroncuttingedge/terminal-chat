@@ -28,19 +28,19 @@ var (
 	usernameSet = make(map[string]bool) // Track usernames to ensure uniqueness
 	usedColors  = make(map[string]bool)
 	colors      = []string{
-		"[#D2691E]",
-		"[#8B4513]",
-		"[#F4A460]",
-		"[#A0522D]",
-		"[#CD853F]",
-		"[#DEB887]",
-		"[#FFF8DC]",
-		"[#A52A2A]",
-		"[#6B8E23]",
-		"[#DAA520]",
-		"[#BC8F8F]",
-		"[#8B4513]",
-		"[#2F4F4F]",
+		"[#FFC0CB]",
+		"[#FD7E14]",
+		"[#28A745]",
+		"[#007BFF]",
+		"[#DC3545]",
+		"[#FFFF00]",
+		"[#C0C0C0X]",
+		"[#3498DB]",
+		"[#E74C3C]",
+		"[#2ECC71]",
+		"[#9B59B6]",
+		"[#D39E00]",
+		"[#000000]",
 	}
 )
 
