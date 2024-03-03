@@ -1,4 +1,9 @@
 Terminal Chat Application
+
+<p align="center">
+  <img src="image.png" alt="Terminal Usage">
+</p>
+
 =========================
 
 This Terminal Chat Application is a real-time communication tool built in Go, designed for developers and terminal enthusiasts. It offers a seamless chat experience directly from your terminal, featuring a user-friendly interface, customizable user colors, and support for special commands. The application leverages Go's concurrency features, the `tview` and `tcell` libraries for the UI, and supports dynamic user interactions.
