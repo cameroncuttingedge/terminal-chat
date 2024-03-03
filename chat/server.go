@@ -2,6 +2,7 @@ package chat
 
 import (
 	"bufio"
+	"crypto/tls"
 	"flag"
 	"fmt"
 	"log"
@@ -217,16 +218,22 @@ func StartServer() {
 
 	portStr := fmt.Sprintf(":%d", *port)
 
-	listener, err := net.Listen("tcp", "0.0.0.0"+portStr)
+	// Load server's certificate and private key
+	cert, err := tls.LoadX509KeyPair("cert.pem", "key.pem")
 	if err != nil {
-		fmt.Println("Failed to start server:", err)
-		return
+		log.Fatalf("server: loadkeys: %s", err)
 	}
+	config := tls.Config{Certificates: []tls.Certificate{cert}, ClientAuth: tls.NoClientCert}
 
+	// Create TLS listener
+	listener, err := tls.Listen("tcp", "0.0.0.0"+portStr, &config)
+	if err != nil {
+		log.Fatalf("server: listen: %s", err)
+	}
 	defer listener.Close()
 
 	localIP := util.GetLocalIP()
-	fmt.Printf("Server started on %s%s\n", localIP, portStr)
+	fmt.Printf("Server started on %s%s with TLS\n", localIP, portStr)
 	fmt.Printf("Clients can connect using: nc %s %d\n", localIP, *port)
 	fmt.Printf("Use these flags -ip=%s -port=%d\n", localIP, *port)
 
@@ -240,7 +247,17 @@ func StartServer() {
 			fmt.Println("Error accepting connection:", err)
 			continue
 		}
-		go handleConnection(conn)
+
+		tlsConn := conn.(*tls.Conn)
+
+		// Handshake to establish TLS connection
+		if err := tlsConn.Handshake(); err != nil {
+			log.Printf("server: handshake failed: %s", err)
+			continue
+		}
+		log.Printf("server: accepted from %s", tlsConn.RemoteAddr())
+
+		go handleConnection(tlsConn)
 	}
 }
 

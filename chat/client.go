@@ -2,6 +2,7 @@ package chat
 
 import (
 	"bufio"
+	"crypto/tls"
 	"flag"
 	"fmt"
 	"log"
@@ -110,13 +111,21 @@ func setupUIComponents(app *tview.Application, username string) *ChatUI {
 }
 
 func connectToServer(serverIp, serverPort string) (net.Conn, error) {
-	log.Printf("Attempting to connect to server at %s:%s", serverIp, serverPort)
-	conn, err := net.Dial("tcp", serverIp+":"+serverPort)
+	log.Printf("Attempting to securely connect to server at %s:%s", serverIp, serverPort)
+
+	// WARNING: In production, consider securely handling server certificates or using a trusted CA.
+	config := &tls.Config{
+		InsecureSkipVerify: true,
+	}
+
+	// Establish a secure TLS connection
+	conn, err := tls.Dial("tcp", serverIp+":"+serverPort, config)
 	if err != nil {
-		log.Printf("Failed to connect to server: %v", err)
+		log.Printf("Failed to securely connect to server: %v", err)
 		return nil, err
 	}
-	log.Println("Successfully connected to server")
+	log.Println("Successfully established a secure connection to server")
+
 	return conn, nil
 }
 
